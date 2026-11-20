@@ -10,14 +10,15 @@
 - 云函数环境自动启用云端存储，也可显式传入 WORKSPACE_STORAGE=netlify。NETLIFY_DB_URL 由平台提供，不写入源码。
 - .netlify 已加入 .gitignore；本地 SQLite 数据也从 Git 和服务端输出追踪中排除。
 
-使用已经关联站点的官方 CLI：
+已连接 GitHub 仓库 EthanShenjj/clevertap-clone，生产分支为 main。推荐通过 Git 推送更新，由 Netlify 服务器构建、注入数据库连接并应用迁移：
 
 ```bash
-netlify deploy --remote --context deploy-preview
-netlify deploy --remote --prod --context production
+git push origin main
 ```
 
-首次部署先创建预览并验证，之后部署生产。当前使用 CLI 发布，未配置 Git 自动部署。
+公开生产地址：https://clevertap-clone.netlify.app。
+
+首轮本地 CLI 上传只完成了页面和函数产物发布，数据库连接及迁移没有生效。最终改为 Git 持续部署，Netlify 管理页确认生产迁移已应用。后续更新继续使用平台构建，避免绕过数据库集成。
 
 ## 持久化机制
 
@@ -37,4 +38,4 @@ netlify deploy --remote --prod --context production
 
 新站最初继承 Netlify 团队的默认登录保护。用户已于 2026-11-20 明确选择开放公开演示访问，站点现已关闭密码和团队登录要求。
 
-生产运行状态和云端验收结果在实际完成后记录于验证文档。
+可通过 /api/health 核对 storage=netlify-postgres。线上浏览器创建的 Welcome from the cloud 模板保留在 Shopwise 项目，用于核对刷新与重新部署后的持久化。

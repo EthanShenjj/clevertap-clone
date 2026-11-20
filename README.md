@@ -2,6 +2,8 @@
 
 基于 Next.js 16、React 19、SQLite 的全栈客户互动工作台。列表、模板、渠道、分群、活动、旅程及看板都通过 REST API 读写数据库。
 
+[在线演示：clevertap-clone.netlify.app](https://clevertap-clone.netlify.app) · GitHub main 分支推送后由 Netlify 自动构建和发布。
+
 ## 本地运行
 
 要求 Node.js 22.13+，已使用 22.22.2 验证。

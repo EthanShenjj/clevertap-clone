@@ -148,6 +148,14 @@ try {
   await request("schema");
 } finally {
   for (const [resource, id] of owned.reverse()) {
+    // Channel references are by channel type. Move only our disposable
+    // configuration to an unused type before removing it, preserving the
+    // active Email campaigns and their original provider configuration.
+    if (resource === "channels")
+      await request(resource + "/" + id, {
+        method: "PATCH",
+        body: { channel: "RCS", provider: "Deployment check" },
+      });
     await request(resource + "/" + id, { method: "DELETE" });
     await request(resource + "/" + id, { status: 404 });
   }
