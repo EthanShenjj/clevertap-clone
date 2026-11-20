@@ -44,4 +44,24 @@ API 验收包含六类资源的服务端分页、搜索、输入校验、同源�
 | Journey 执行画布 | [journey.png](screenshots/journey.png)                 |
 | 窄屏活动表格     | [mobile-table.png](screenshots/mobile-table.png)       |
 
-当前为本地全栈演示版。真实供应商投递、生产账号认证、自动定时任务及其余高级分析模块不属于本次已验证交付范围，详细边界见 [实际架构](architecture.md)。
+当前为全栈演示版。真实供应商投递、生产账号认证、自动定时任务及其余高级分析模块不属于本次已验证交付范围，详细边界见 [实际架构](architecture.md)。
+
+## 2026-11-20 Netlify 上线验收
+
+生产地址：[clevertap-clone.netlify.app](https://clevertap-clone.netlify.app)。已按用户明确选择开放公开演示访问；GitHub main 分支已连接自动部署。
+
+| 检查             | 结果                                                                        |
+| ---------------- | --------------------------------------------------------------------------- |
+| 生产发布         | 通过，Netlify 确认已应用 workspace_snapshots 迁移                           |
+| 本地回归         | Lint、TypeScript、生产构建通过；11 个单元测试和 122 项隔离 API 检查通过     |
+| 线上接口         | scripts/verify-deployment.mjs 的 73 项检查通过                              |
+| 云端持久化       | 接口返回 storage=netlify-postgres，响应带 X-Workspace-Storage               |
+| 并发写入         | 两个并发创建的模板均保留，编辑内容在后续独立请求中一致                      |
+| 渠道与查询       | 配置校验状态保存，分群人数 250，漏斗、统计、Schema 及用户接口可用           |
+| 项目与同源保护   | 跨项目对象返回 404，外部 Origin 写请求返回 403                              |
+| 浏览器保存与刷新 | 新建 Welcome from the cloud 模板，保存 Welcome 类别、主题和正文；刷新后保留 |
+| 重新部署后恢复   | 从 a12fe43 发布到 5ffa9f0 后，模板 tem-6d94fb65-48b 的内容仍一致            |
+
+最终核对的生产部署 ID：6b00535d0788e9920f1f8691。线上脚本只清理自己的临时模板和渠道，保留浏览器创建的欢迎模板。云端存储适配与当前限制见 [部署说明](netlify-deployment.md)。
+
+线上截图：[首页](screenshots/netlify-overview.png)、[欢迎模板](screenshots/netlify-template.png)。
