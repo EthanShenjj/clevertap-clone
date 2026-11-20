@@ -32,6 +32,12 @@ npm run start
 
 配置和查询是真实后端调用。消息发送、供应商连接检查与用户响应采用演示模拟；不联系外部供应商。
 
+## Netlify 部署
+
+已配置 Next.js 服务端运行时和 Netlify Database。云端通过 PostgreSQL 事务保存压缩的工作区快照，SQLite 只在每次请求的临时目录中计算；函数重启或重新部署不会依赖临时文件恢复数据。本地仍使用 data/clevertap.sqlite。
+
+部署设置、存储边界和运行方式见 [Netlify 部署说明](docs/netlify-deployment.md)。本地工作区数据库不会上传，线上首次访问会建立独立的初始演示数据。
+
 ## 演示与验证
 
 工作区保留了浏览器验收创建的 Returning premium shoppers 分群、Personal welcome note 模板、A little weekend inspiration 活动。

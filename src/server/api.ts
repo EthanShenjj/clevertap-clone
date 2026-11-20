@@ -9,6 +9,7 @@ import type {
 import { RESOURCES } from "@/lib/types";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
+import { usesCloudStorage } from "./database-context";
 import {
   allEntities,
   getDb,
@@ -197,7 +198,13 @@ export async function handleApi(
             .get()!.count,
         ]),
       );
-      return json({ data: { status: "ok", storage: "sqlite", counts } });
+      return json({
+        data: {
+          status: "ok",
+          storage: usesCloudStorage() ? "netlify-postgres" : "sqlite",
+          counts,
+        },
+      });
     }
     if (resource === "projects") {
       if (method === "POST" && id && action === "reset") {

@@ -25,3 +25,7 @@ Cohorts、Flows、Pivots、CleverAI、预测模型、推荐与高级生命周期
 视觉资料见 [官方资料目录](reference-catalog.md)。图片和动画补充图表与预览，视频和手册补充布局与操作；不宣称所有官方页面已完成逐像素还原。
 
 验证见 [验证记录](verification.md)，截图在 screenshots 目录。
+
+2026-11-20 Netlify 适配：云端使用 Netlify Database / PostgreSQL 的 workspace_snapshots 表作为持久化来源。每次请求在同一数据库事务中锁定工作区行、恢复请求专属 SQLite、执行原业务服务；成功写操作压缩并提交快照后才返回。失败操作丢弃临时结果。事务锁防止不同函数实例相互覆盖，AsyncLocalStorage 防止请求共享 SQLite 连接。
+
+这是面向当前小型演示数据的兼容层，会串行处理工作区请求；高并发服务应将各业务表及查询直接迁移到 PostgreSQL。云端不读取本地数据库文件，也不会把临时文件当作持久化来源。详见 [部署说明](netlify-deployment.md)。
