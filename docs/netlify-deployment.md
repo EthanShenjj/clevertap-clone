@@ -7,14 +7,14 @@
 - Node.js 22.22.2，构建命令 npm run build，发布目录 .next。
 - Netlify 自动安装 Next.js Runtime，将 SSR 和 /api 路由部署到 Node.js Functions。
 - @netlify/database 自动提供托管 PostgreSQL；迁移文件在 netlify/database/migrations。
-- 环境变量 WORKSPACE_STORAGE=netlify 设置在 Builds 和 Functions 范围。NETLIFY_DB_URL 由平台提供，不写入源码。
+- 云函数环境自动启用云端存储，也可显式传入 WORKSPACE_STORAGE=netlify。NETLIFY_DB_URL 由平台提供，不写入源码。
 - .netlify 已加入 .gitignore；本地 SQLite 数据也从 Git 和服务端输出追踪中排除。
 
 使用已经关联站点的官方 CLI：
 
 ```bash
-netlify deploy --context deploy-preview
-netlify deploy --prod --context production
+netlify deploy --remote --context deploy-preview
+netlify deploy --remote --prod --context production
 ```
 
 首次部署先创建预览并验证，之后部署生产。当前使用 CLI 发布，未配置 Git 自动部署。
@@ -35,6 +35,6 @@ netlify deploy --prod --context production
 
 ## 访问
 
-新站继承 Netlify 团队的默认登录保护。是否开放公开访问由站点访问控制决定；部署操作不会自动关闭现有保护。
+新站最初继承 Netlify 团队的默认登录保护。用户已于 2026-11-20 明确选择开放公开演示访问，站点现已关闭密码和团队登录要求。
 
 生产运行状态和云端验收结果在实际完成后记录于验证文档。
