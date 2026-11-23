@@ -78,3 +78,7 @@ API 验收包含六类资源的服务端分页、搜索、输入校验、同源�
 - 交互与 React 检查：组件按功能拆分、数据请求独立并行、effect 清理、表单标签与反馈、弹窗键盘关闭；复用项目已有组件和样式。
 
 界面证据：[服务商表单](screenshots/sms-provider-settings.png)、[优先级组](screenshots/sms-provider-groups.png)、[演示回执](screenshots/sms-test-receipt.png)、[窄屏](screenshots/sms-mobile.png)。实际接入方式和剩余生产边界见 [SMS 文档](sms.md)。
+
+云端验证：在 `fd649f9` 对应的 Netlify 部署版本完成 34 项检查，确认响应使用 `netlify-postgres`，SMS 配置、失败切换、幂等发送、送达/点击回执和跨项目隔离均可用。保留演示服务商 `SMS Demo · Primary`、`SMS Demo · Fallback`，默认组 `SMS Demo · Priority`，以及一条已送达/点击的演示消息；没有启用真实发送。首次发布停留在 Netlify 部署处理阶段，取消后通过 Git 无缓存构建重试。线上界面截图见 [SMS 服务商组](screenshots/netlify-sms.png)。
+
+重试发布成功：Netlify deploy `6b04571118bb3df05f3c18cc`，代码提交 `fd649f98b8d9fc401bf7ff7bfaa009f207c273d1`，正式域名于 2026-11-23 23:09（Asia/Shanghai）完成切换。正式地址 `/api/sms` 返回 `X-Workspace-Storage: netlify-postgres`、2 个服务商、1 个分组和 `liveEnabled: false`；浏览器确认重新部署前创建的消息仍为 Delivered/Clicked，保留两次按优先级执行的尝试记录。证据：[正式站服务商组](screenshots/netlify-sms.png)、[失败切换与回执详情](screenshots/netlify-sms-receipt.png)。
