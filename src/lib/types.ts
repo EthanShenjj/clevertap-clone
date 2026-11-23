@@ -122,6 +122,7 @@ export interface Channel extends BaseEntity {
   provider: string;
   config: { sender: string; domain: string; appId: string };
   checkedAt?: string;
+  sms?: import("./sms").SmsSettings;
 }
 export interface CampaignStats {
   sent: number;
@@ -143,6 +144,7 @@ export interface Campaign extends BaseEntity {
   goal: string;
   stats: CampaignStats;
   runs: number;
+  smsTarget?: string;
 }
 export interface JourneyNode {
   id: string;
@@ -157,6 +159,7 @@ export interface JourneyNode {
     hours?: number;
     content?: MessageContent;
     count?: number;
+    smsTarget?: string;
   };
 }
 export interface JourneyEdge {

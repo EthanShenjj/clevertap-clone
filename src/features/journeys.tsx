@@ -18,6 +18,8 @@ import {
 import { useWorkspace } from "@/components/workspace-provider";
 import { api, endpoint, number, shortDate, useRequest } from "@/lib/client";
 import { validateJourney } from "@/lib/domain";
+import { SmsTargetField } from "@/components/sms-target-field";
+import type { SmsWorkspace } from "@/lib/sms";
 import {
   EMPTY_CONTENT,
   type ChannelType,
@@ -210,6 +212,9 @@ function JourneyEditor({ initial }: { initial?: Journey }) {
     wrapper = useRef<HTMLDivElement>(null);
   const segments = useRequest<ListResponse<Segment>>(
     endpoint("segments", projectId, { pageSize: 100 }),
+  );
+  const smsWorkspace = useRequest<{ data: SmsWorkspace }>(
+    endpoint("sms", projectId),
   );
   const selected = nodes.find((node) => node.id === selectedId),
     selectedEdge = edges.find((edge) => edge.id === selectedEdgeId);
@@ -830,11 +835,26 @@ function JourneyEditor({ initial }: { initial?: Journey }) {
             </Field>
           ) : null}
           {selected.data.kind === "message" ? (
-            <MessageEditor
-              channel={selected.data.channel || "Push"}
-              content={selected.data.content || EMPTY_CONTENT}
-              onChange={(content) => changeNode({ content })}
-            />
+            <>
+              {selected.data.channel === "SMS" && smsWorkspace.data ? (
+                <SmsTargetField
+                  workspace={smsWorkspace.data.data}
+                  value={selected.data.smsTarget || ""}
+                  onChange={(smsTarget) => changeNode({ smsTarget })}
+                />
+              ) : null}
+              {selected.data.channel === "SMS" && smsWorkspace.error ? (
+                <ErrorState
+                  message={smsWorkspace.error}
+                  retry={smsWorkspace.reload}
+                />
+              ) : null}
+              <MessageEditor
+                channel={selected.data.channel || "Push"}
+                content={selected.data.content || EMPTY_CONTENT}
+                onChange={(content) => changeNode({ content })}
+              />
+            </>
           ) : null}
           {selected.data.kind === "exit" ? (
             <div className="aside-note">

@@ -65,3 +65,16 @@ API 验收包含六类资源的服务端分页、搜索、输入校验、同源�
 最终核对的生产部署 ID：6b00535d0788e9920f1f8691。线上脚本只清理自己的临时模板和渠道，保留浏览器创建的欢迎模板。云端存储适配与当前限制见 [部署说明](netlify-deployment.md)。
 
 线上截图：[首页](screenshots/netlify-overview.png)、[欢迎模板](screenshots/netlify-template.png)。
+
+## 2026-11-23 SMS 补齐
+
+- `npm run build`、ESLint 与 TypeScript 检查通过。
+- `npm test`：15 项通过，包含 4 项短信协议、长度与回执测试。
+- `npm run test:api`：122 项原有全栈回归通过。
+- `npm run test:sms`：85 项通过。独立临时数据库；覆盖服务商配置、跨项目隔离、优先级切换、幂等及并发重复提交、Twilio/Nexmo/Generic OAuth 请求、回调验签、提前到达的回执、Campaign/Journey 联动、归档和重启持久化。服务商 HTTP 传输为模拟，不发送真实短信。
+- 浏览器实际创建 Twilio/Nexmo 演示配置、优先级组，发送演示短信并记录 Delivered/Clicked；日志与统计对应更新。
+- 390px 窄屏检查修复顶部按钮溢出后，页面宽度与 viewport 均为 390px；恢复默认窗口尺寸。
+- 服务商操作菜单使用独立浮层，避免被表格滚动区域裁切。
+- 交互与 React 检查：组件按功能拆分、数据请求独立并行、effect 清理、表单标签与反馈、弹窗键盘关闭；复用项目已有组件和样式。
+
+界面证据：[服务商表单](screenshots/sms-provider-settings.png)、[优先级组](screenshots/sms-provider-groups.png)、[演示回执](screenshots/sms-test-receipt.png)、[窄屏](screenshots/sms-mobile.png)。实际接入方式和剩余生产边界见 [SMS 文档](sms.md)。

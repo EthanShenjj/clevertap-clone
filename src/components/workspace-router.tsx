@@ -77,6 +77,10 @@ const ProjectSettings = dynamic(
   () => import("@/features/settings").then((m) => m.ProjectSettings),
   { loading },
 );
+const SmsSettings = dynamic(
+  () => import("@/features/sms").then((m) => m.SmsSettingsPage),
+  { loading },
+);
 export function WorkspaceRouter() {
   const path = usePathname().split("/").filter(Boolean).map(decodeURIComponent),
     [section, id, mode] = path;
@@ -115,6 +119,8 @@ export function WorkspaceRouter() {
       <ResourceList resource="journeys" />
     );
   if (section === "data" && id === "schema") return <Schema />;
+  if (section === "settings" && id === "channels" && mode === "sms")
+    return <SmsSettings />;
   if (section === "settings")
     return id === "channels" ? <Channels /> : <ProjectSettings />;
   return (

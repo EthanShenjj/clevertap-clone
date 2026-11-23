@@ -10,6 +10,7 @@ import { RESOURCES } from "@/lib/types";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 import { usesCloudStorage } from "./database-context";
+import { handleSmsApi, normalizeSmsProvider } from "./sms";
 import {
   allEntities,
   getDb,
@@ -171,7 +172,8 @@ export async function handleApi(
     const url = new URL(request.url),
       params = url.searchParams,
       method = request.method;
-    if (method !== "GET") {
+    const smsCallback = path[0] === "sms" && path[1] === "callbacks";
+    if (method !== "GET" && !smsCallback) {
       const origin = request.headers.get("origin");
       const publicHost = request.headers.get("host") || url.host;
       let sameOrigin = !origin;
@@ -273,6 +275,8 @@ export async function handleApi(
     }
     const projectId = params.get("projectId") || "shopwise",
       project = requireProject(projectId);
+    if (resource === "sms")
+      return await handleSmsApi(request, path.slice(1), projectId);
     if (resource === "analytics" && method === "GET")
       return json({
         data: analytics(
@@ -539,6 +543,8 @@ export async function handleApi(
       if (method === "GET") {
         if (id) {
           let item = requireEntity(table, id, projectId);
+          if (table === "channels" && (item as Channel).channel === "SMS")
+            item = normalizeSmsProvider(item as Channel);
           if (table === "segments")
             item = hydrateSegments(
               [item as import("@/lib/types").Segment],
@@ -559,6 +565,12 @@ export async function handleApi(
           return json({ data: item, references });
         }
         let items = allEntities(table, projectId);
+        if (table === "channels")
+          items = items.map((item) =>
+            (item as Channel).channel === "SMS"
+              ? normalizeSmsProvider(item as Channel)
+              : item,
+          );
         if (table === "segments")
           items = hydrateSegments(
             items as import("@/lib/types").Segment[],

@@ -27,12 +27,13 @@ npm run start
 - Segments 属性和事件条件、AND/OR、人数与可达性、保存、编辑、用户画像及时间线。
 - Templates 新建、编辑、复制和删除；邮件内容块增删排序及四种渠道预览。
 - Channels 配置编辑、后端校验、连接状态保存，8 种渠道配置入口。
+- SMS 独立配置页：Twilio/Nexmo、Generic HTTP、优先级服务商组、测试发送、回执日志和统计；Campaign/Journey 保存服务商选择。
 - Campaigns 受众、模板调用、个性化预览、A/B、排期、草稿、发布、暂停与模拟结果。
 - Journeys 节点添加/拖放、连线、配置、撤销重做、校验、草稿、版本和模拟路径。
 - Boards 卡片添加、调整尺寸、拖动排序和持久化。
 - Schema、项目设置、时区、项目隔离及单项目演示数据重置。
 
-配置和查询是真实后端调用。消息发送、供应商连接检查与用户响应采用演示模拟；不联系外部供应商。
+配置和查询是真实后端调用。公开站默认采用演示发送；SMS 另提供受保护的真实测试发送接口，需要部署所有者配置凭据、允许的测试号码和发送权限。Campaign/Journey 仍为手动模拟执行。
 
 ## Netlify 部署
 
@@ -52,13 +53,17 @@ npm run lint
 npm test
 npm run build
 npm run test:api
+npm run test:sms
 ```
 
 test:api 需要先构建。测试在 3101 端口使用临时数据库验证接口与重启持久化，结束后清理自己的测试数据，不操作当前工作区数据库。
 
+test:sms 在 3102 端口使用独立临时数据库和模拟服务商，验证请求、优先级切换、幂等、回执验签及联动，不发送真实短信。
+
 ## 文档和源码
 
 - [API 文档](docs/api.md)
+- [SMS 配置、接口和真实测试接入](docs/sms.md)
 - [实际架构与边界](docs/architecture.md)
 - [验证记录](docs/verification.md)
 - 前端：src/features、src/components。

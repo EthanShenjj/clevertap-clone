@@ -135,3 +135,7 @@ curl 'http://127.0.0.1:3000/api/campaigns?projectId=shopwise&page=1&pageSize=10&
 ```
 
 400 参数错误，403 非同源写入，404 对象或项目不存在，409 状态/引用冲突，415 非 JSON，422 字段或发布校验失败。
+
+## SMS 配置与投递
+
+新增独立 SMS 服务商、优先级组、测试发送、日志、统计和已验签回调接口。详细字段、路由及部署变量见 [SMS 接口说明](sms.md)。原有 `/channels` 读取兼容 SMS 记录；SMS 写入通过 `/sms/providers`，防止绕过 SMS 校验和引用规则。

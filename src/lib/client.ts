@@ -12,16 +12,23 @@ export class RequestError extends Error {
 }
 export async function api<T>(
   path: string,
-  options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+  options: {
+    method?: string;
+    body?: unknown;
+    signal?: AbortSignal;
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<T> {
   const response = await fetch(path, {
     method: options.method || "GET",
     signal: options.signal,
     cache: "no-store",
-    headers:
-      options.method && options.method !== "GET"
+    headers: {
+      ...(options.method && options.method !== "GET"
         ? { "Content-Type": "application/json" }
-        : undefined,
+        : {}),
+      ...options.headers,
+    },
     body:
       options.body !== undefined
         ? JSON.stringify(options.body)
@@ -146,8 +153,15 @@ export function usePostQuery<T>(path: string, body: unknown) {
 export function downloadCsv(rows: Record<string, unknown>[], filename: string) {
   if (!rows.length) return;
   const columns = Object.keys(rows[0]);
-  const escape = (value: unknown) =>
-    '"' + String(value ?? "").replaceAll('"', '""') + '"';
+  const escape = (value: unknown) => {
+    const text = String(value ?? "");
+    return (
+      '"' +
+      (/^[=+\-@]/.test(text) ? "'" : "") +
+      text.replaceAll('"', '""') +
+      '"'
+    );
+  };
   const csv =
     "\uFEFF" +
     [

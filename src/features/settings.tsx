@@ -25,8 +25,10 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function Channels() {
+  const router = useRouter();
   const { projectId } = useWorkspace(),
     request = useRequest<ListResponse<Channel>>(
       endpoint("channels", projectId, {
@@ -36,6 +38,20 @@ export function Channels() {
       }),
     );
   const [selected, setSelected] = useState<Channel | null>(null);
+  const channelCards = request.data?.data
+    .filter(
+      (channel, index, items) =>
+        channel.channel !== "SMS" ||
+        items.findIndex((item) => item.channel === "SMS") === index,
+    )
+    .map((channel) =>
+      channel.channel === "SMS" &&
+      request.data?.data.some(
+        (item) => item.channel === "SMS" && item.status === "Connected",
+      )
+        ? { ...channel, status: "Connected" }
+        : channel,
+    );
   return (
     <>
       <PageHeader
@@ -67,9 +83,13 @@ export function Channels() {
         </div>
         <span className="connection-count">
           <i />
-          {request.data?.data.filter(
-            (channel) => channel.status === "Connected",
-          ).length ?? 0}{" "}
+          {
+            new Set(
+              request.data?.data
+                .filter((channel) => channel.status === "Connected")
+                .map((channel) => channel.channel),
+            ).size
+          }{" "}
           channels connected
         </span>
       </div>
@@ -79,17 +99,26 @@ export function Channels() {
         <Loading />
       ) : (
         <div className="channels-grid">
-          {request.data.data.map((channel) => (
+          {channelCards?.map((channel) => (
             <section className="panel channel-card" key={channel.id}>
               <div className="channel-card-top">
                 <ChannelIcon channel={channel.channel} boxed size={25} />
                 <Badge status={channel.status} />
               </div>
-              <h2>{channel.name}</h2>
-              <p>{channel.description}</p>
+              <h2>{channel.channel === "SMS" ? "SMS" : channel.name}</h2>
+              <p>
+                {channel.channel === "SMS"
+                  ? "Manage SMS providers, priority routes and delivery receipts."
+                  : channel.description}
+              </p>
               <div className="provider-row">
                 <span>Service provider</span>
-                <strong>{channel.provider}</strong>
+                <strong>
+                  {channel.channel === "SMS"
+                    ? (request.data?.data.filter((c) => c.channel === "SMS")
+                        .length || 0) + " providers"
+                    : channel.provider}
+                </strong>
               </div>
               <div className="channel-card-footer">
                 <span>
@@ -101,7 +130,11 @@ export function Channels() {
                 </span>
                 <Button
                   variant="secondary"
-                  onClick={() => setSelected(channel)}
+                  onClick={() =>
+                    channel.channel === "SMS"
+                      ? router.push("/settings/channels/sms")
+                      : setSelected(channel)
+                  }
                 >
                   {channel.status === "Connected" ? (
                     <Settings2 size={14} />
@@ -120,7 +153,7 @@ export function Channels() {
         <ShieldCheck size={19} />
         <div>
           <strong>
-            Your configurations are saved securely in this local workspace.
+            Your channel configurations are saved in this workspace.
           </strong>
           <p>
             Configuration checks validate local settings. Actual provider

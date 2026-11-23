@@ -2,6 +2,7 @@ import {
   computeFunnel,
   evaluateRules,
   stableHash,
+  personalize,
   validateJourney,
 } from "@/lib/domain";
 import type {
@@ -22,6 +23,14 @@ import type {
 } from "@/lib/types";
 import { CHANNELS, EMPTY_STATS } from "@/lib/types";
 import { randomUUID } from "node:crypto";
+import { ApiError } from "./api-error";
+export { ApiError } from "./api-error";
+import {
+  normalizeSmsProvider,
+  simulateSmsDelivery,
+  validateSmsSettings,
+  validateSmsTarget,
+} from "./sms";
 import { z } from "zod";
 import {
   allEntities,
@@ -35,16 +44,6 @@ import {
   writeEntity,
 } from "./database";
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-    public fields?: Record<string, string>,
-  ) {
-    super(message);
-  }
-}
 export function requireProject(id: string): Project {
   const project = getProject(id);
   if (!project)
@@ -137,6 +136,7 @@ const nodeSchema = z.object({
     hours: z.number().min(0).max(8760).optional(),
     content: contentSchema.optional(),
     count: z.number().optional(),
+    smsTarget: z.string().max(100).optional(),
   }),
 });
 const edgeSchema = z.object({
@@ -192,6 +192,7 @@ const schemas = {
     split: z.number().min(1).max(99).optional(),
     schedule: z.string().optional(),
     goal: z.string().max(100).optional(),
+    smsTarget: z.string().max(100).optional(),
   }),
   journeys: z.object({
     ...shared,
@@ -297,6 +298,8 @@ function validateReferences(
 ) {
   if (resource === "campaigns") {
     const item = entity as Campaign;
+    if (item.channel === "SMS" && item.smsTarget)
+      validateSmsTarget(projectId, item.smsTarget);
     if (item.segmentId) requireEntity("segments", item.segmentId, projectId);
     if (item.templateId) {
       const template = requireEntity<MessageTemplate>(
@@ -313,9 +316,12 @@ function validateReferences(
     }
   }
   if (resource === "journeys")
-    for (const node of (entity as Journey).nodes)
+    for (const node of (entity as Journey).nodes) {
+      if (node.data.channel === "SMS" && node.data.smsTarget)
+        validateSmsTarget(projectId, node.data.smsTarget);
       if (node.data.segmentId)
         requireEntity("segments", node.data.segmentId, projectId);
+    }
   if (resource === "segments") {
     const query = (entity as Segment).query;
     const propertyFields = [
@@ -385,6 +391,16 @@ export function save(
     body,
   ) as Record<string, unknown>;
   const previous = id ? requireEntity(resource, id, projectId) : undefined;
+  if (
+    resource === "channels" &&
+    (input.channel === "SMS" ||
+      (previous && (previous as Channel).channel === "SMS"))
+  )
+    throw new ApiError(
+      422,
+      "SMS_CONFIGURATION_REQUIRED",
+      "Manage SMS providers through the dedicated SMS configuration page.",
+    );
   const now = new Date().toISOString(),
     entityId = id || resource.slice(0, 3) + "-" + randomUUID().slice(0, 12);
   const defaults: Record<Resource, object> = {
@@ -489,6 +505,12 @@ export function save(
 }
 export function remove(resource: Resource, id: string, projectId: string) {
   const item = requireEntity(resource, id, projectId);
+  if (resource === "channels" && (item as Channel).channel === "SMS")
+    throw new ApiError(
+      409,
+      "SMS_CONFIGURATION_REQUIRED",
+      "Manage SMS provider references through the SMS configuration page.",
+    );
   if (["Running", "Scheduled"].includes(item.status))
     throw new ApiError(
       409,
@@ -580,6 +602,7 @@ function validateCampaign(
 ) {
   const errors: Record<string, string> = {};
   if (!item.segmentId) errors.segmentId = "Select a target segment.";
+  if (item.channel === "SMS") validateSmsTarget(projectId, item.smsTarget);
   if (!item.content.body.trim()) errors.body = "Write your message.";
   if (item.channel === "Email" && !item.content.subject.trim())
     errors.subject = "Add an email subject.";
@@ -621,6 +644,8 @@ function validateCampaign(
 function validateJourneyForPublish(journey: Journey, projectId: string) {
   const errors = validateJourney(journey.nodes, journey.edges);
   for (const node of journey.nodes) {
+    if (node.data.kind === "message" && node.data.channel === "SMS")
+      validateSmsTarget(projectId, node.data.smsTarget);
     if (
       node.data.kind === "message" &&
       !allEntities<Channel>("channels", projectId).some(
@@ -659,7 +684,17 @@ export function publish(
   return item;
 }
 export function testChannel(id: string, projectId: string) {
-  const item = requireEntity<Channel>("channels", id, projectId);
+  let item = requireEntity<Channel>("channels", id, projectId);
+  if (item.channel === "SMS") {
+    item = normalizeSmsProvider(item);
+    if (item.status === "Archived")
+      throw new ApiError(
+        409,
+        "PROVIDER_ARCHIVED",
+        "Archived SMS providers cannot be restored.",
+      );
+    validateSmsSettings(item);
+  }
   if (
     item.channel === "Email" &&
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.config.sender)
@@ -739,6 +774,12 @@ export function simulate(
       "Publish or resume this item before running a simulation.",
     );
   const data = dataset(projectId);
+  if (resource === "campaigns" && (item as Campaign).channel === "SMS")
+    validateSmsTarget(projectId, (item as Campaign).smsTarget);
+  if (resource === "journeys")
+    for (const node of (item as Journey).nodes)
+      if (node.data.channel === "SMS")
+        validateSmsTarget(projectId, node.data.smsTarget);
   const query =
     resource === "campaigns"
       ? requireEntity<Segment>(
@@ -794,6 +835,26 @@ export function simulate(
         viewed = score < 48;
         clicked = score < (variantIndex ? 20 : 16);
         converted = score < (variantIndex ? 9 : 6);
+        if ((item as Campaign).channel === "SMS") {
+          const campaign = item as Campaign;
+          const message = simulateSmsDelivery(
+            projectId,
+            campaign.smsTarget || "",
+            person.phone.replace(/\s/g, ""),
+            personalize(
+              variantIndex ? campaign.variantB : campaign.content,
+              person,
+            ).body,
+            runId + ":" + person.id,
+            clicked,
+          );
+          sent = !!message.providerMessageId;
+          if (!sent) {
+            viewed = false;
+            clicked = false;
+            converted = false;
+          }
+        }
       } else {
         const journey = item as Journey;
         let current = journey.nodes.find((n) => n.data.kind === "entry"),
@@ -832,8 +893,31 @@ export function simulate(
             current.data.kind === "message" &&
             person.reachability[current.data.channel || "Push"]
           ) {
-            sent = true;
             const messageScore = stableHash(person.id + id + current.id) % 100;
+            if (current.data.channel === "SMS") {
+              const message = simulateSmsDelivery(
+                projectId,
+                current.data.smsTarget || "",
+                person.phone.replace(/\s/g, ""),
+                personalize(
+                  current.data.content || defaultContent("SMS"),
+                  person,
+                ).body,
+                runId + ":" + person.id + ":" + current.id,
+                messageScore < 20,
+              );
+              if (!message.providerMessageId) {
+                nodeCounts.set(current.id, count);
+                records.push({
+                  personId: person.id,
+                  variant: "A",
+                  outcome: "SMS dispatch rejected",
+                  nodeId: current.id,
+                });
+                break;
+              }
+            }
+            sent = true;
             viewed ||= messageScore < 48;
             clicked ||= messageScore < 20;
             converted ||= messageScore < 9;

@@ -60,6 +60,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PersonSample } from "./segments";
+import { SmsTargetField } from "@/components/sms-target-field";
+import type { SmsWorkspace } from "@/lib/sms";
 
 export function CampaignEditorPage({ id }: { id?: string }) {
   const { projectId } = useWorkspace(),
@@ -245,6 +247,7 @@ function CampaignEditor({
   const { projectId, toast } = useWorkspace(),
     router = useRouter();
   const [step, setStep] = useState(0),
+    [smsTarget, setSmsTarget] = useState(initial?.smsTarget || ""),
     [draftId, setDraftId] = useState(initial?.id || ""),
     [name, setName] = useState(initial?.name || ""),
     [segmentId, setSegmentId] = useState(
@@ -285,6 +288,9 @@ function CampaignEditor({
   const templates = useRequest<ListResponse<MessageTemplate>>(
     endpoint("templates", projectId, { pageSize: 100, channel }),
   );
+  const smsWorkspace = useRequest<{ data: SmsWorkspace }>(
+    channel === "SMS" ? endpoint("sms", projectId) : null,
+  );
   const profiles = useRequest<ListResponse<Person>>(
     endpoint("people", projectId, { pageSize: 10 }),
   );
@@ -302,6 +308,7 @@ function CampaignEditor({
   const payload = () => ({
     name,
     channel,
+    smsTarget: channel === "SMS" ? smsTarget : "",
     segmentId,
     templateId,
     content,
@@ -458,6 +465,19 @@ function CampaignEditor({
                   maxLength={120}
                 />
               </Field>
+              {channel === "SMS" && smsWorkspace.data ? (
+                <SmsTargetField
+                  workspace={smsWorkspace.data.data}
+                  value={smsTarget}
+                  onChange={setSmsTarget}
+                />
+              ) : null}
+              {channel === "SMS" && smsWorkspace.error ? (
+                <ErrorState
+                  message={smsWorkspace.error}
+                  retry={smsWorkspace.reload}
+                />
+              ) : null}
               <Field
                 label="Conversion goal"
                 hint="Track the customer action you want this campaign to inspire."
@@ -473,7 +493,15 @@ function CampaignEditor({
                   <Info size={17} />
                   <span>
                     Set up this channel before publishing.{" "}
-                    <Link href="/settings/channels">Configure channel</Link>
+                    <Link
+                      href={
+                        channel === "SMS"
+                          ? "/settings/channels/sms"
+                          : "/settings/channels"
+                      }
+                    >
+                      Configure channel
+                    </Link>
                   </span>
                 </div>
               ) : null}
@@ -708,6 +736,20 @@ function CampaignEditor({
                 {[
                   ["Campaign", name || "Add a campaign name"],
                   ["Channel", channel],
+                  ...(channel === "SMS"
+                    ? [
+                        [
+                          "SMS route",
+                          smsWorkspace.data?.data.providers.find(
+                            (p) => p.id === smsTarget,
+                          )?.name ||
+                            smsWorkspace.data?.data.groups.find(
+                              (g) => "group:" + g.id === smsTarget,
+                            )?.name ||
+                            "Default SMS route",
+                        ],
+                      ]
+                    : []),
                   [
                     "Audience",
                     selectedSegment?.name || "Select a target audience",

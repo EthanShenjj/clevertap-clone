@@ -64,6 +64,9 @@ export function openDatabase(file: string): DatabaseSync {
   db.exec(
     "CREATE TABLE IF NOT EXISTS people (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), name TEXT NOT NULL, email TEXT NOT NULL, data TEXT NOT NULL); CREATE INDEX IF NOT EXISTS idx_people_project ON people(project_id); CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), person_id TEXT NOT NULL REFERENCES people(id), name TEXT NOT NULL, timestamp TEXT NOT NULL, run_id TEXT, data TEXT NOT NULL); CREATE INDEX IF NOT EXISTS idx_events_query ON events(project_id,name,timestamp); CREATE INDEX IF NOT EXISTS idx_events_person ON events(person_id,timestamp); CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), resource_id TEXT NOT NULL, created_at TEXT NOT NULL, data TEXT NOT NULL); CREATE INDEX IF NOT EXISTS idx_runs_resource ON runs(project_id,resource_id);",
   );
+  db.exec(
+    "CREATE TABLE IF NOT EXISTS sms_groups (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), data TEXT NOT NULL); CREATE INDEX IF NOT EXISTS idx_sms_groups_project ON sms_groups(project_id); CREATE TABLE IF NOT EXISTS sms_messages (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), idempotency_key TEXT NOT NULL, created_at TEXT NOT NULL, data TEXT NOT NULL, UNIQUE(project_id,idempotency_key)); CREATE INDEX IF NOT EXISTS idx_sms_messages_project ON sms_messages(project_id,created_at);",
+  );
   if (!db.prepare("SELECT version FROM migrations WHERE version=1").get())
     seed(db);
   return db;
@@ -221,7 +224,14 @@ function seed(db: DatabaseSync, onlyProject?: string) {
     const insertPerson = db.prepare("INSERT INTO people VALUES (?,?,?,?,?)");
     const insertEvent = db.prepare("INSERT INTO events VALUES (?,?,?,?,?,?,?)");
     if (onlyProject) {
-      for (const table of ["runs", "events", "people", ...RESOURCES])
+      for (const table of [
+        "sms_groups",
+        "sms_messages",
+        "runs",
+        "events",
+        "people",
+        ...RESOURCES,
+      ])
         db.prepare("DELETE FROM " + table + " WHERE project_id=?").run(
           onlyProject,
         );

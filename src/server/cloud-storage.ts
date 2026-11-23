@@ -52,7 +52,12 @@ async function cloudRequest(request: Request, route: string[]) {
     db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     db.close();
     db = undefined;
-    if (response.ok && (!payload || request.method !== "GET")) {
+    if (
+      response.ok &&
+      (!payload ||
+        request.method !== "GET" ||
+        (route[0] === "sms" && route[1] === "callbacks"))
+    ) {
       const snapshot = await compress(await readFile(file));
       await client.query(
         "UPDATE workspace_snapshots SET payload=$1, revision=revision+1, updated_at=NOW() WHERE id=$2",
